@@ -9,7 +9,11 @@
 #import <UIKit/UIKit.h>
 
 @interface ViewController : UIViewController
+@property (weak, nonatomic) IBOutlet UITextField *hostTF;
 
+@property (weak, nonatomic) IBOutlet UITextField *portTF;
+@property (weak, nonatomic) IBOutlet UITextField *inputTF;
+@property (weak, nonatomic) IBOutlet UILabel *receiveLB;
 
 @end
 
