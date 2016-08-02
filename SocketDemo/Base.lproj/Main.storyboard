@@ -89,7 +89,7 @@
                                 <nil key="highlightedColor"/>
                             </label>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="tIj-bG-Vt4">
-                                <rect key="frame" x="153" y="81" width="0.0" height="21"/>
+                                <rect key="frame" x="153" y="81" width="307" height="21"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="21" id="B7u-M2-xpC"/>
                                 </constraints>
@@ -162,9 +162,15 @@
                                 <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="vq0-2q-jeH">
-                                <rect key="frame" x="163" y="82" width="407" height="30"/>
-                                <state key="normal" title="create server"/>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="vq0-2q-jeH">
+                                <rect key="frame" x="470" y="82" width="100" height="30"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="100" id="89z-1f-d0y"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="system" pointSize="15"/>
+                                <state key="normal" title="create server">
+                                    <color key="titleColor" red="0.0" green="0.47843137250000001" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                </state>
                                 <connections>
                                     <action selector="createServer:" destination="BYZ-38-t0r" eventType="touchUpInside" id="F9V-Am-hlU"/>
                                 </connections>
@@ -241,6 +247,7 @@
                         <outlet property="receiveLB" destination="tIj-bG-Vt4" id="nim-a0-FRD"/>
                         <outlet property="recetiveIV" destination="oBC-Zf-igw" id="aFo-9K-4yL"/>
                         <outlet property="sendIV" destination="M9d-ud-b1M" id="Zbz-eL-PYI"/>
+                        <outlet property="serverBtn" destination="vq0-2q-jeH" id="bc9-a2-9JS"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>

@@ -13,40 +13,47 @@ enum{
 };
 
 enum{
-    TAG_FIXED_LENGTH_HEADER = 100,
-    TAG_RESPONSE_BODY
+    TAG_FIXED_LENGTH_HEADER = 100, //tag 报头
+    TAG_RESPONSE_BODY              //数据主体
 };
 
 @import CocoaAsyncSocket;
 
 @interface SocketClient : NSObject<GCDAsyncSocketDelegate>
 
-@property(nonatomic,strong)GCDAsyncSocket *clientSocket;
-@property(nonatomic,strong)GCDAsyncSocket *serverSocket;
+@property(nonatomic,strong)GCDAsyncSocket *clientSocket; //客户端
+@property(nonatomic,strong)GCDAsyncSocket *serverSocket; //服务端
+
 @property(nonatomic,copy)NSString *host;
 @property(nonatomic)UInt16 port;
-@property(nonatomic)NSInteger offine;
+@property(nonatomic)NSInteger offine; //断线类型
 
-@property(nonatomic)NSUInteger headerLenght;
+@property(nonatomic)NSInteger sendTimeout; //超时时间
+
+@property(nonatomic)NSUInteger headerLenght;  //设置报头长度
 @property(nonatomic,strong)NSDictionary *headerDic;
 
-@property(nonatomic)NSUInteger bodyLenght;
-
-
+@property(nonatomic,readonly)NSUInteger bodyLenght;
 
 @property(nonatomic,copy)void (^didConnectBlock)();
 @property(nonatomic,copy)void (^didDisconnectBlock)(NSError *error);
 @property(nonatomic,copy)void (^didWriteDataBlock)(NSInteger tag);
 @property(nonatomic,copy)void (^didReadBlock)(NSData *data,NSInteger tag);
 @property(nonatomic,copy)void (^didReadBodyBlock)(NSData *data,NSDictionary *info);
+
 + (SocketClient *)sharedClient;
 
-- (BOOL)acceptOnPort:(UInt16)port;
+- (void)writeData:(NSData *)data info:(NSDictionary *)info;
+
+- (BOOL)acceptOnPort:(UInt16)port; //创建服务端
+
+//客户端连接
 - (BOOL)connct;
 - (BOOL)connctToHost:(NSString *)host port:(UInt16)port;
 
 - (void)disconnct;
 
-
+//获取设备ip
++ (NSString *)getIPAddress;
 
 @end

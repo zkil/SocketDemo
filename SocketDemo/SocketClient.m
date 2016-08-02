@@ -7,6 +7,9 @@
 //
 
 #import "SocketClient.h"
+#import <ifaddrs.h>
+#import <arpa/inet.h>
+
 
 @implementation SocketClient
 static dispatch_once_t onceToken;
@@ -14,6 +17,7 @@ static SocketClient *socketClient;
 + (SocketClient *)sharedClient {
     dispatch_once(&onceToken, ^{
         socketClient = [[[self class]alloc]init];
+        socketClient.sendTimeout = 30;
     });
     return socketClient;
 }
@@ -26,7 +30,7 @@ static SocketClient *socketClient;
     if (error != nil) {
         NSLog(@"%@",[error localizedDescription]);
     }else{
-        NSLog(@"創建服務端成功");
+        NSLog(@"創建服務端成功 host:%@ port:%d",[SocketClient getIPAddress],port);
     }
     return result;
 }
@@ -53,6 +57,37 @@ static SocketClient *socketClient;
     [self.clientSocket disconnect];
 }
 
+- (void)writeData:(NSData *)data info:(NSDictionary *)info {
+    NSMutableData *sendData = [NSMutableData new];
+    NSMutableData *headerData = [NSMutableData dataWithLength:self.headerLenght];
+    
+    NSMutableDictionary *headerDic = [NSMutableDictionary new];
+    
+    
+    if (info != nil) {
+        [headerDic addEntriesFromDictionary:info];
+    }
+    [headerDic setObject:@(data.length) forKey:@"bodyLenght"];
+    
+    NSError *error;
+    NSData *infoData = [NSJSONSerialization dataWithJSONObject:headerDic options:NSJSONWritingPrettyPrinted error:&error];
+    if (error != nil) {
+        NSLog(@"%@",error.localizedDescription);
+        return;
+    }
+    
+    if (infoData.length > self.headerLenght) {
+        NSLog(@"info数据太大，请调整 headerLenght 大小");
+        return;
+    }
+    [headerData replaceBytesInRange:NSMakeRange(0, infoData.length) withBytes:infoData.bytes];
+   
+    [sendData appendData:headerData];
+    [sendData appendData:data];
+    
+    [self.clientSocket writeData:sendData withTimeout:self.sendTimeout tag:-1];
+}
+
 #pragma -mark- 连接成功
 - (void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port {
     NSLog(@"socket连接成功%@:%d",host,port);
@@ -67,7 +102,7 @@ static SocketClient *socketClient;
 }
 
 - (void)socket:(GCDAsyncSocket *)sock didAcceptNewSocket:(GCDAsyncSocket *)newSocket {
-    NSLog(@"socket服務器");
+    NSLog(@"有socket客户端连接到服务端");
     self.clientSocket = newSocket;
     [newSocket readDataToLength:self.headerLenght withTimeout:30 tag:TAG_FIXED_LENGTH_HEADER];
 }
@@ -80,6 +115,8 @@ static SocketClient *socketClient;
         NSLog(@"socket断开成功");
     }
     
+    
+    //客户端断线重连
     if (self.offine == SocketOfflineByServer && sock == self.clientSocket) {
         NSLog(@"socket掉线，正在重连...");
         NSError *error;
@@ -107,7 +144,7 @@ static SocketClient *socketClient;
 
 
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag {
-    NSLog(@"接收到数据");
+    
     if (self.didReadBlock != nil) {
         self.didReadBlock(data,tag);
     }
@@ -118,9 +155,10 @@ static SocketClient *socketClient;
     
     switch (tag) {
         case TAG_FIXED_LENGTH_HEADER: { // 1.已读取报文头，计算长度后继续读取报文体
+            NSLog(@"接收到数据");
             NSError *error;
             NSString *headerString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-            NSData *newData = [[headerString stringByReplacingOccurrencesOfString:@"\0" withString:@""] dataUsingEncoding:NSUTF8StringEncoding];
+            NSData *newData = [[headerString stringByReplacingOccurrencesOfString:@"\0" withString:@""] dataUsingEncoding:NSUTF8StringEncoding]; //去掉 \0
             NSDictionary *headerDic = [NSJSONSerialization JSONObjectWithData:newData options:NSJSONReadingMutableContainers error:&error];
             if (error != nil) {
                 
@@ -132,9 +170,9 @@ static SocketClient *socketClient;
             
             self.headerDic = headerDic;
             
-            self.bodyLenght = [self.headerDic[@"bodyLenght"] integerValue];
+            _bodyLenght = [self.headerDic[@"bodyLenght"] integerValue];
             
-            [sock readDataToLength:self.bodyLenght withTimeout:30 tag:TAG_RESPONSE_BODY];
+            [sock readDataToLength:self.bodyLenght withTimeout:self.sendTimeout tag:TAG_RESPONSE_BODY];
         }
             break;
         case TAG_RESPONSE_BODY:{
@@ -143,34 +181,43 @@ static SocketClient *socketClient;
             //            if ([self.delegate respondsToSelector:@selector(socketConnection:didReceivedData:)]) {
             //                [self.delegate socketConnection:self didReceivedData:data];
             //            }
-            NSString *type = self.headerDic[@"type"];
-            if ([type isEqualToString:@"text"]) {
-                NSString *str = [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
-                NSLog(@"收到文本:%@",str);
-            }else if ([type isEqualToString:@"file"]) {
-                NSString *fileName = self.headerDic[@"name"];
-                NSLog(@"收到文件:%@",fileName);
-                
-                NSString *documentPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
-                [data writeToFile:[documentPath stringByAppendingPathComponent:fileName] atomically:YES];
-                
-            }
-
             if (self.didReadBodyBlock != nil) {
                 self.didReadBodyBlock(data,self.headerDic);
             }
             
-            [sock readDataToLength:self.bodyLenght withTimeout:30 tag:TAG_FIXED_LENGTH_HEADER]; //继续读,下次调用此方法时，tag是TAG_FIXED_LENGTH_HEADER
+            [sock readDataToLength:self.headerLenght withTimeout:self.sendTimeout tag:TAG_FIXED_LENGTH_HEADER]; //继续读,下次调用此方法时，tag是TAG_FIXED_LENGTH_HEADER
         }
             break;
         default:
             break;
     }
     
-    //持续接收数据
-    //[sock readDataWithTimeout:30 tag:tag];
 }
 
-
++ (NSString *)getIPAddress {
+    NSString *address = @"error";
+    struct ifaddrs *interfaces = NULL;
+    struct ifaddrs *temp_addr = NULL;
+    int success = 0;
+    // retrieve the current interfaces - returns 0 on success
+    success = getifaddrs(&interfaces);
+    if (success == 0) {
+        // Loop through linked list of interfaces
+        temp_addr = interfaces;
+        while(temp_addr != NULL) {
+            if(temp_addr->ifa_addr->sa_family == AF_INET) {
+                // Check if interface is en0 which is the wifi connection on the iPhone
+                if([[NSString stringWithUTF8String:temp_addr->ifa_name] isEqualToString:@"en0"]) {
+                    // Get NSString from C String
+                    address = [NSString stringWithUTF8String:inet_ntoa(((struct sockaddr_in *)temp_addr->ifa_addr)->sin_addr)];
+                }
+            }
+            temp_addr = temp_addr->ifa_next;
+        }
+    }
+    // Free memory
+    freeifaddrs(interfaces);
+    return address;
+}
 
 @end

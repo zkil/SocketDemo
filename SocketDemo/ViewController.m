@@ -20,7 +20,8 @@
     self.hostTF.text = [[NSUserDefaults standardUserDefaults] objectForKey:@"host"];
     self.portTF.text = [[[NSUserDefaults standardUserDefaults] objectForKey:@"port"] stringValue];
     
-    [SocketClient sharedClient].headerLenght = 50;
+    [SocketClient sharedClient].headerLenght = 100;
+    [SocketClient sharedClient].sendTimeout = 100;
     [[SocketClient sharedClient] setDidReadBodyBlock:^(NSData *data, NSDictionary *info) {
         NSString *type = info[@"type"];
         if ([type isEqualToString:@"text"]) {
@@ -35,6 +36,7 @@
     UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(tapInputImageAction)];
     self.sendIV.userInteractionEnabled = YES;
     [self.sendIV addGestureRecognizer:tapGesture];
+    
 }
 
 - (void)tapInputImageAction {
@@ -61,26 +63,26 @@
     }
     
     if (self.inputTF.text != nil && ![self.inputTF.text isEqualToString:@""]) {
-        NSMutableData *data = [NSMutableData dataWithLength:50];
-        NSLog(@"%ld",data.length);
         NSData *bodyData = [self.inputTF.text dataUsingEncoding:NSUTF8StringEncoding];
-        NSDictionary *headerDic = @{
-                                    @"type":@"text",
-                                    @"bodyLenght":@(bodyData.length)
-                                    };
-        NSData *headerData = [NSJSONSerialization dataWithJSONObject:headerDic options:NSJSONWritingPrettyPrinted error:nil];
-        
-        [data replaceBytesInRange:NSMakeRange(0, headerData.length) withBytes:headerData.bytes];
-        [data appendData:bodyData];
-        [[SocketClient sharedClient].clientSocket writeData:data withTimeout:30 tag:-1];
+        NSDictionary *info = @{
+                               @"type":@"text"
+                               };
+        [[SocketClient sharedClient] writeData:bodyData info:info];
     }
     
 }
 
 - (IBAction)createServer:(id)sender {
     UInt16 port = [self.portTF.text intValue];
-    if ([[SocketClient sharedClient] acceptOnPort:port]) {
-        NSLog(@"host:%@ %d",[SocketClient sharedClient].serverSocket.localHost,[SocketClient sharedClient].serverSocket.localPort);
+    if (![SocketClient sharedClient].serverSocket.isConnected) {
+        if ([[SocketClient sharedClient] acceptOnPort:port]) {
+            NSLog(@"host:%@ %d",[SocketClient sharedClient].serverSocket.localHost,[SocketClient sharedClient].serverSocket.localPort);
+        }
+        self.hostTF.text = [SocketClient getIPAddress];
+        self.serverBtn.backgroundColor = [UIColor greenColor];
+    }else{
+        [[SocketClient sharedClient].serverSocket disconnect];
+        self.serverBtn.backgroundColor = [UIColor clearColor];
     }
     
 }
@@ -164,18 +166,12 @@
             UIImage* original = [info objectForKey:UIImagePickerControllerOriginalImage];
             self.sendIV.image = original;
             
-            NSMutableData *data = [NSMutableData dataWithLength:50];
             NSData *bodyData = UIImageJPEGRepresentation(original, 0.5);
-            NSDictionary *headerDic = @{
+            NSDictionary *info = @{
                                         @"type":@"file",
-                                        @"bodyLenght":@(bodyData.length),
                                         @"name":@"123.jpg"
                                         };
-            NSData *headerData = [NSJSONSerialization dataWithJSONObject:headerDic options:NSJSONWritingPrettyPrinted error:nil];
-            
-            [data replaceBytesInRange:NSMakeRange(0, headerData.length) withBytes:headerData.bytes];
-            [data appendData:bodyData];
-            [[SocketClient sharedClient].clientSocket writeData:data withTimeout:30 tag:-1];
+           [[SocketClient sharedClient]writeData:bodyData info:info];
         }
 //        }else{  // public.movie
 //            NSURL *url=[info objectForKey:UIImagePickerControllerMediaURL];//视频路径

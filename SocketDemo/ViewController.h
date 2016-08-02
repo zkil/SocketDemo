@@ -10,6 +10,7 @@
 
 @interface ViewController : UIViewController
 @property (weak, nonatomic) IBOutlet UITextField *hostTF;
+@property (weak, nonatomic) IBOutlet UIButton *serverBtn;
 
 @property (weak, nonatomic) IBOutlet UITextField *portTF;
 @property (weak, nonatomic) IBOutlet UITextField *inputTF;
