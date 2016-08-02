@@ -21,19 +21,27 @@ enum{
 
 @interface SocketClient : NSObject<GCDAsyncSocketDelegate>
 
-@property(nonatomic,strong)GCDAsyncSocket *socket;
+@property(nonatomic,strong)GCDAsyncSocket *clientSocket;
+@property(nonatomic,strong)GCDAsyncSocket *serverSocket;
 @property(nonatomic,copy)NSString *host;
 @property(nonatomic)UInt16 port;
 @property(nonatomic)NSInteger offine;
 
-@property(nonatomic)long packetHeaderLength;
+@property(nonatomic)NSUInteger headerLenght;
+@property(nonatomic,strong)NSDictionary *headerDic;
+
+@property(nonatomic)NSUInteger bodyLenght;
+
+
 
 @property(nonatomic,copy)void (^didConnectBlock)();
 @property(nonatomic,copy)void (^didDisconnectBlock)(NSError *error);
 @property(nonatomic,copy)void (^didWriteDataBlock)(NSInteger tag);
 @property(nonatomic,copy)void (^didReadBlock)(NSData *data,NSInteger tag);
+@property(nonatomic,copy)void (^didReadBodyBlock)(NSData *data,NSDictionary *info);
 + (SocketClient *)sharedClient;
 
+- (BOOL)acceptOnPort:(UInt16)port;
 - (BOOL)connct;
 - (BOOL)connctToHost:(NSString *)host port:(UInt16)port;
 

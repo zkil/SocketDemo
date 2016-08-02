@@ -14,6 +14,8 @@
 @property (weak, nonatomic) IBOutlet UITextField *portTF;
 @property (weak, nonatomic) IBOutlet UITextField *inputTF;
 @property (weak, nonatomic) IBOutlet UILabel *receiveLB;
+@property (weak, nonatomic) IBOutlet UIImageView *recetiveIV;
+@property (weak, nonatomic) IBOutlet UIImageView *sendIV;
 
 @end
 
