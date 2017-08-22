@@ -7,15 +7,18 @@
 //
 
 #import <Foundation/Foundation.h>
-enum{
+
+typedef enum : NSUInteger {
     SocketOfflineByServer,// 服务器掉线，默认为0
     SocketOfflineByUser,  // 用户主动cut
-};
+} SocketOfflineType;
 
-enum{
+
+typedef enum : NSUInteger {
     TAG_FIXED_LENGTH_HEADER = 100, //tag 报头
     TAG_RESPONSE_BODY              //数据主体
-};
+} TAG_TYPE;
+
 
 @import CocoaAsyncSocket;
 
@@ -26,7 +29,7 @@ enum{
 
 @property(nonatomic,copy)NSString *host;
 @property(nonatomic)UInt16 port;
-@property(nonatomic)NSInteger offine; //断线类型
+@property(nonatomic)SocketOfflineType offine; //断线类型
 
 @property(nonatomic)NSInteger sendTimeout; //超时时间
 
@@ -51,6 +54,7 @@ enum{
 - (BOOL)connct;
 - (BOOL)connctToHost:(NSString *)host port:(UInt16)port;
 
+//断开
 - (void)disconnct;
 
 //获取设备ip

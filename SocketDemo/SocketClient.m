@@ -12,9 +12,10 @@
 
 
 @implementation SocketClient
-static dispatch_once_t onceToken;
-static SocketClient *socketClient;
+
 + (SocketClient *)sharedClient {
+    static dispatch_once_t onceToken;
+    static SocketClient *socketClient;
     dispatch_once(&onceToken, ^{
         socketClient = [[[self class]alloc]init];
         socketClient.sendTimeout = 30;
@@ -45,7 +46,7 @@ static SocketClient *socketClient;
     [self disconnct];
     self.clientSocket = [[GCDAsyncSocket alloc]initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
     NSError *error;
-    BOOL result = [self.clientSocket connectToHost:self.host onPort:self.port withTimeout:10 error:&error];
+    BOOL result = [self.clientSocket connectToHost:self.host onPort:self.port withTimeout:self.sendTimeout error:&error];
     if (error != nil) {
         NSLog(@"%@",[error localizedDescription]);
     }
@@ -91,10 +92,11 @@ static SocketClient *socketClient;
 #pragma -mark- 连接成功
 - (void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port {
     NSLog(@"socket连接成功%@:%d",host,port);
+    self.offine = SocketOfflineByServer;
     
     //第一次读取报头
     [sock readDataToLength:self.headerLenght withTimeout:30 tag:TAG_FIXED_LENGTH_HEADER];
-    self.offine = SocketOfflineByServer;
+    
     if (self.didConnectBlock != nil) {
         self.didConnectBlock();
     }
